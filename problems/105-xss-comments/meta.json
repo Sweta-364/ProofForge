@@ -1,0 +1,14 @@
+{
+  "slug": "105-xss-comments",
+  "title": "Fix the XSS hole in the comment renderer",
+  "description": "# Issue #140 - Stored XSS via comments\n\nSecurity report: posting a comment containing <img src=x onerror=alert(document.cookie)> executes in every visitor's browser. starter/comments.js injects user-controlled author and text straight into innerHTML.\n\n**Acceptance criteria:**\n- user-controlled values must never be interpolated into innerHTML (or any raw-HTML API)\n- render the author and text using safe DOM APIs (textContent / createTextNode) or escape them first\n- the rendered output keeps the same structure: bold author, then the text",
+  "difficulty": "senior",
+  "category": "security",
+  "track": "frontend",
+  "language": "javascript",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 60,
+  "points": 200,
+  "display_order": 15,
+  "optimal_hint": "Ideal: build the nodes with document.createElement('strong'), set author/text via textContent or createTextNode, and appendChild. An escapeHtml() helper plus innerHTML is acceptable but second-best. Using DOMPurify is overkill here but not wrong."
+}

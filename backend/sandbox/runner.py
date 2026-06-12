@@ -44,9 +44,21 @@ class SandboxRunner:
         try:
             # 1. Write student files
             for filepath, content in code_files.items():
-                dest = submission_dir / filepath
+                dest = (submission_dir / filepath).resolve()
+                if not dest.is_relative_to(submission_dir.resolve()):
+                    logger.warning("Skipping path-traversal file: %s", filepath)
+                    continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_text(content, encoding="utf-8")
+
+            # Problem pytest.ini files are not packed into the tarballs, so
+            # provide the shared config (async test support) at the rootdir.
+            (submission_dir / "pytest.ini").write_text(
+                "[pytest]\n"
+                "asyncio_mode = auto\n"
+                "asyncio_default_fixture_loop_scope = session\n",
+                encoding="utf-8",
+            )
 
             # 2. Download test suite from MinIO and extract into workspace/tests/
             test_key = f"tests/{problem_slug}.tar.gz"

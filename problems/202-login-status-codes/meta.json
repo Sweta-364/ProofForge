@@ -1,0 +1,14 @@
+{
+  "slug": "202-login-status-codes",
+  "title": "Fix login returning 200 for wrong passwords",
+  "description": "# Issue #58 - Frontend cannot tell a failed login from a successful one\n\nThe login form always navigates to the dashboard because POST /api/login returns 200 even for wrong credentials (with an error key in the body). Sending a payload without a password crashes with a 500.\n\n**Acceptance criteria:**\n- valid credentials: 200 with access_token and token_type\n- wrong username or password: 401 with a JSON detail message\n- malformed payloads (missing fields): 422, not a crash - use a Pydantic request model",
+  "difficulty": "junior",
+  "category": "api-design",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 35,
+  "points": 100,
+  "display_order": 17,
+  "optimal_hint": "Ideal: a Pydantic model with required username/password fields (FastAPI then returns 422 automatically) and raise HTTPException(401, 'Invalid username or password') for bad credentials. The 401 message should not reveal whether the username or the password was wrong."
+}

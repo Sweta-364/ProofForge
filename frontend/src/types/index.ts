@@ -17,6 +17,7 @@ export interface Problem {
   description: string
   difficulty: 'junior' | 'mid' | 'senior'
   category: string
+  track?: string
   language: string
   files: Record<string, string>
 }
@@ -131,10 +132,25 @@ export interface ProblemProgress {
   title: string
   difficulty: string
   category: string
+  track: string
   points: number
   solved: boolean
   best_score: number | null
   attempts: number
+}
+
+export interface ActivityDay {
+  date: string
+  count: number
+}
+
+export interface ActivityResponse {
+  days: ActivityDay[]
+  total_active_days: number
+  total_activity: number
+  current_streak: number
+  longest_streak: number
+  max_in_one_day: number
 }
 
 export interface RecentSubmission {

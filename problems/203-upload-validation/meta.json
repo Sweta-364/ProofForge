@@ -1,0 +1,14 @@
+{
+  "slug": "203-upload-validation",
+  "title": "Validate file uploads (type and size)",
+  "description": "# Issue #66 - Users can upload anything, of any size\n\nOur avatar upload endpoint accepts raw file bytes (POST /api/upload?filename=...). Today it stores .exe files and a tester uploaded a 4GB file that filled the disk.\n\n**Acceptance criteria:**\n- only png, jpg, jpeg, gif and pdf extensions are accepted (case-insensitive) - anything else returns 415\n- bodies larger than MAX_BYTES (1 MiB) return 413\n- empty bodies return 400\n- valid uploads keep returning {filename, size, status}",
+  "difficulty": "mid",
+  "category": "validation",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 18,
+  "optimal_hint": "Ideal: extract the extension with filename.rsplit('.', 1) (reject names without a dot), lowercase it, check against ALLOWED_EXTENSIONS -> 415; len(body) > MAX_BYTES -> 413; len(body) == 0 -> 400. Use the existing MAX_BYTES/ALLOWED_EXTENSIONS constants rather than re-hardcoding values."
+}

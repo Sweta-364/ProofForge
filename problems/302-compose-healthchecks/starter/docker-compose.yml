@@ -1,0 +1,17 @@
+# BROKEN: web races the database; depends_on only waits for container start.
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app-password
+      POSTGRES_DB: shop
+
+  web:
+    image: shopapi:1.4
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://app:app-password@db:5432/shop
+    depends_on:
+      - db

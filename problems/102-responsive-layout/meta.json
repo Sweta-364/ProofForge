@@ -1,0 +1,14 @@
+{
+  "slug": "102-responsive-layout",
+  "title": "Make the fixed-width dashboard layout responsive",
+  "description": "# Issue #115 - Dashboard unusable on mobile\n\nOn phones the dashboard (starter/index.html + starter/styles.css) forces a 900px-wide layout: users must pinch-zoom and scroll sideways. There is no viewport meta tag and no breakpoint.\n\n**Acceptance criteria:**\n- index.html declares a viewport meta tag\n- .container no longer hardcodes width: 900px (use max-width so desktop keeps its width)\n- a media query at max-width: 768px stacks .layout vertically (flex-direction: column) and lets .sidebar span the full width",
+  "difficulty": "junior",
+  "category": "responsive-design",
+  "track": "frontend",
+  "language": "css",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 35,
+  "points": 100,
+  "display_order": 12,
+  "optimal_hint": "Ideal fix: viewport meta in the HTML head; .container { max-width: 900px; width: 100%; }; @media (max-width: 768px) { .layout { flex-direction: column; } .sidebar { width: 100%; } }. The .content column should be flexible (flex: 1) rather than a hardcoded 650px."
+}

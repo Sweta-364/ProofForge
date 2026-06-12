@@ -1,0 +1,14 @@
+{
+  "slug": "101-accessibility-fix",
+  "title": "Fix accessibility violations on the store landing page",
+  "description": "# Issue #102 - Accessibility audit failed\n\nAn audit of our landing page (starter/index.html) found WCAG violations:\n- the <html> element has no lang attribute\n- images have no alt text (screen readers announce the filename)\n- form inputs have no associated <label> elements\n- the submit button has no type attribute\n\n**Acceptance criteria:**\n- html has a lang attribute\n- every img has non-empty alt text\n- every text/email/password input has an id with a matching <label for=...> (with visible text) or an aria-label\n- the form button declares type=\\\"submit\\\"",
+  "difficulty": "junior",
+  "category": "accessibility",
+  "track": "frontend",
+  "language": "html",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 30,
+  "points": 100,
+  "display_order": 11,
+  "optimal_hint": "Ideal fix: lang=\\\"en\\\" on <html>, descriptive alt text on all three images, <label for> wired to input ids (placeholder alone is not a label), and type=\\\"submit\\\" on the button. Empty alt=\\\"\\\" should only be accepted for decorative images, which these are not."
+}

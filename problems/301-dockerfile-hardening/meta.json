@@ -1,0 +1,14 @@
+{
+  "slug": "301-dockerfile-hardening",
+  "title": "Harden the API Dockerfile (root user, unpinned base, no caching)",
+  "description": "# Issue #210 - Container review failed before production\n\nPlatform review rejected our API image (starter/Dockerfile):\n- FROM python:latest - builds are not reproducible\n- the container runs as root\n- pip caches wheels inside the image (bloat)\n- no WORKDIR, files land in /\n- copying the whole context before installing deps busts the layer cache on every code change\n\n**Acceptance criteria:**\n- pin the base image to a specific tag (no :latest anywhere)\n- create and switch to a non-root USER\n- pip installs use --no-cache-dir\n- set a WORKDIR\n- COPY requirements.txt and install dependencies BEFORE copying the rest of the source",
+  "difficulty": "junior",
+  "category": "containers",
+  "track": "devops",
+  "language": "docker",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 35,
+  "points": 100,
+  "display_order": 21,
+  "optimal_hint": "Ideal: FROM python:3.12-slim, WORKDIR /app, COPY requirements.txt + RUN pip install --no-cache-dir before COPY . ., a dedicated uid/gid user created with groupadd/useradd, USER directive after the COPYs. Bonus polish: EXPOSE kept, CMD unchanged."
+}

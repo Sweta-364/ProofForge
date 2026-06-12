@@ -1,0 +1,14 @@
+{
+  "slug": "201-api-contract",
+  "title": "Make the profile API match the frontend contract",
+  "description": "# Issue #73 - Profile page renders 'undefined' everywhere\n\nThe React profile page reads profile.id, profile.username, profile.email and profile.joined (see starter/app.js), but GET /api/profile/{id} returns different key names and the id as a string. Unknown users crash the endpoint with a 500.\n\n**Documented contract:**\n```json\n{ \\\"id\\\": 1, \\\"username\\\": \\\"alice\\\", \\\"email\\\": \\\"alice@example.com\\\", \\\"joined\\\": \\\"2025-03-14\\\" }\n```\n\n**Acceptance criteria:**\n- the response uses exactly the documented keys and types (id is an integer)\n- unknown user ids return 404 with a JSON detail message",
+  "difficulty": "junior",
+  "category": "api-design",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 30,
+  "points": 100,
+  "display_order": 16,
+  "optimal_hint": "Fix the backend, not the frontend: return {id (int), username, email, joined} and raise HTTPException(404, ...) for unknown users. Students who rename fields in app.js instead of fixing the API are fixing the wrong side of the contract."
+}

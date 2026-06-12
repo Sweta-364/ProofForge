@@ -1,4 +1,5 @@
 import logging
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -28,7 +29,7 @@ async def get_progress(current_user: dict = Depends(get_current_user)):
 
     problem_rows = await db.fetch(
         """
-        SELECT p.id, p.slug, p.title, p.difficulty, p.category,
+        SELECT p.id, p.slug, p.title, p.difficulty, p.category, p.track,
                p.points, p.display_order,
                MAX(s.score) FILTER (WHERE s.status = 'completed')   AS best_score,
                COUNT(s.id)                                          AS attempts,
@@ -67,6 +68,7 @@ async def get_progress(current_user: dict = Depends(get_current_user)):
                 "title": r["title"],
                 "difficulty": r["difficulty"],
                 "category": r["category"],
+                "track": r["track"],
                 "points": r["points"],
                 "solved": r["solved"],
                 "best_score": r["best_score"],
@@ -86,6 +88,66 @@ async def get_progress(current_user: dict = Depends(get_current_user)):
             }
             for r in submission_rows
         ],
+    }
+
+
+@router.get("/users/me/activity")
+async def get_activity(current_user: dict = Depends(get_current_user)):
+    """Daily activity counts (last 366 days) + streaks for the profile heatmap.
+
+    Activity = submissions made that day (any status) plus sessions started.
+    """
+    user_id = str(current_user["id"])
+
+    rows = await db.fetch(
+        """
+        SELECT day, SUM(cnt)::int AS count FROM (
+            SELECT DATE(submitted_at) AS day, COUNT(*) AS cnt
+            FROM   submissions
+            WHERE  user_id = $1
+              AND  submitted_at >= NOW() - INTERVAL '366 days'
+            GROUP  BY DATE(submitted_at)
+            UNION ALL
+            SELECT DATE(started_at) AS day, COUNT(*) AS cnt
+            FROM   active_sessions
+            WHERE  user_id = $1
+              AND  started_at >= NOW() - INTERVAL '366 days'
+            GROUP  BY DATE(started_at)
+        ) activity
+        GROUP  BY day
+        ORDER  BY day
+        """,
+        user_id,
+    )
+
+    counts = {r["day"]: r["count"] for r in rows}
+
+    # Streaks over all active days (consecutive calendar days)
+    today = date.today()
+    active_days = sorted(counts.keys())
+    longest = current = 0
+    prev: date | None = None
+    for d in active_days:
+        current = current + 1 if prev is not None and (d - prev).days == 1 else 1
+        longest = max(longest, current)
+        prev = d
+
+    # Current streak must end today or yesterday
+    current_streak = 0
+    cursor = today if today in counts else today - timedelta(days=1)
+    while cursor in counts:
+        current_streak += 1
+        cursor -= timedelta(days=1)
+
+    return {
+        "days": [
+            {"date": d.isoformat(), "count": c} for d, c in sorted(counts.items())
+        ],
+        "total_active_days": len(active_days),
+        "total_activity": sum(counts.values()),
+        "current_streak": current_streak,
+        "longest_streak": longest,
+        "max_in_one_day": max(counts.values(), default=0),
     }
 
 

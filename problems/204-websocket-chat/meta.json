@@ -1,0 +1,14 @@
+{
+  "slug": "204-websocket-chat",
+  "title": "Fix the chat websocket protocol and message history",
+  "description": "# Issue #81 - Chat client crashes parsing replies; history is always empty\n\nThe web chat client calls JSON.parse on every websocket frame, but /ws/chat replies with plain strings like 'alice: hi'. The history panel (GET /api/messages) is always empty because messages are never recorded, and a client disconnect raises an unhandled exception in the logs.\n\n**Protocol:** every received frame {user, text} must be answered with a JSON frame {user, text, timestamp} and appended to the in-memory MESSAGES history.\n\n**Acceptance criteria:**\n- websocket replies are JSON with user, text and a numeric timestamp\n- every message appears in GET /api/messages in order\n- client disconnects are handled cleanly (no unhandled WebSocketDisconnect)",
+  "difficulty": "mid",
+  "category": "websockets",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 50,
+  "points": 150,
+  "display_order": 19,
+  "optimal_hint": "Ideal: build message = {user, text, timestamp: time.time()}, MESSAGES.append(message), await websocket.send_json(message), and wrap the receive loop in try/except WebSocketDisconnect. Watch for students who json.dumps into send_text (acceptable) vs send_json (cleaner)."
+}

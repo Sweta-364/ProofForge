@@ -1,0 +1,14 @@
+{
+  "slug": "008-sql-injection",
+  "title": "Fix SQL injection in the product search endpoint",
+  "description": "# Issue #52 - Search crashes on apostrophes; pentest found data exfiltration\n\nTwo reports about the same code path:\n1. Searching for \\\"O'Briens\\\" crashes with a SQL syntax error.\n2. A penetration test pulled every user's password through the search box using a UNION attack.\n\nThe query in search_products() builds SQL by string interpolation.\n\n**Acceptance criteria:**\n- normal and apostrophe-containing searches work\n- injection payloads return no extra data and never crash the service",
+  "difficulty": "mid",
+  "category": "security",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 8,
+  "optimal_hint": "The fix is a parameterized query: _conn.execute(\\\"SELECT id, name, price FROM products WHERE name LIKE ?\\\", (f\\\"%{name}%\\\",)). Escaping quotes manually is the lazy fix and should lose points."
+}

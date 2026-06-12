@@ -99,6 +99,14 @@ export default function AppHeader({ user, center, backTo }: AppHeaderProps) {
                 Dashboard
               </Link>
               <Link
+                to="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#30363d] transition-colors"
+              >
+                <UserIcon size={13} />
+                My Profile
+              </Link>
+              <Link
                 to={`/p/${user.github_login}`}
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#30363d] transition-colors"

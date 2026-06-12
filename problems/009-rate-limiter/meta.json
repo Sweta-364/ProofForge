@@ -1,0 +1,14 @@
+{
+  "slug": "009-rate-limiter",
+  "title": "Fix the rate limiter blocking users forever",
+  "description": "# Issue #61 - Rate limiter never resets and mixes clients together\n\nAfter the first 5 requests our API returns 429 forever - even the next day. Worse, one noisy client exhausts the limit for EVERY client.\n\nRateLimiter is supposed to be a sliding-window limiter: at most max_requests per window_seconds, per client.\n\n**Acceptance criteria:**\n- each client_id gets its own budget\n- requests older than window_seconds no longer count\n- the injected clock (self.clock) is used for all time arithmetic so it stays testable",
+  "difficulty": "senior",
+  "category": "concurrency",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 75,
+  "points": 200,
+  "display_order": 9,
+  "optimal_hint": "Ideal fix: dict mapping client_id to a deque of timestamps; on allow(), prune entries older than now - window_seconds, then compare the count to max_requests. Watch for solutions that reset the whole window at once (fixed window) instead of sliding."
+}

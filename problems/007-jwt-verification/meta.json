@@ -1,0 +1,14 @@
+{
+  "slug": "007-jwt-verification",
+  "title": "Fix JWT verification accepting forged and expired tokens",
+  "description": "# Issue #47 - Anyone can forge a session token\n\nA security audit found that our API accepts ANY JWT - expired tokens, tokens signed with the wrong key, even tokens crafted by hand. verify_token() decodes the payload without checking anything.\n\n**Acceptance criteria:**\n- verify_token() returns the username only for tokens signed with our SECRET_KEY\n- expired tokens are rejected (raise a jwt exception)\n- tokens signed with any other key are rejected",
+  "difficulty": "mid",
+  "category": "security",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 7,
+  "optimal_hint": "The fix is jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) which verifies signature and exp claim, letting PyJWT exceptions propagate. Students should NOT catch-and-ignore exceptions or disable verification options."
+}

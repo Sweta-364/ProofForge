@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import { Play, Send, Loader, AlertCircle } from 'lucide-react'
 import { api } from '../lib/api'
@@ -24,8 +24,46 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 
 type RightTab = 'tests' | 'details'
 
+const EXTENSION_LANGUAGES: Record<string, string> = {
+  py: 'python',
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  html: 'html',
+  css: 'css',
+  json: 'json',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'ini',
+  ini: 'ini',
+  cfg: 'ini',
+  conf: 'ini',
+  sh: 'shell',
+  sql: 'sql',
+  md: 'markdown',
+  txt: 'plaintext',
+}
+
+function languageForFile(path: string): string {
+  const name = path.split('/').pop() ?? path
+  if (name === 'Dockerfile') return 'dockerfile'
+  const ext = name.includes('.') ? name.split('.').pop()!.toLowerCase() : ''
+  return EXTENSION_LANGUAGES[ext] ?? 'plaintext'
+}
+
+/** Pick the most likely file the student should edit first. */
+function pickInitialFile(paths: string[]): string {
+  const editable = paths.filter(
+    (k) => !k.includes('test') && !k.includes('hidden') && !k.endsWith('__init__.py')
+      && !k.endsWith('requirements.txt'),
+  )
+  return editable[0] ?? paths[0] ?? ''
+}
+
 export default function WorkspacePage() {
   const navigate = useNavigate()
+  const { slug } = useParams<{ slug: string }>()
 
   const [user, setUser] = useState<User | null>(null)
   const [problem, setProblem] = useState<Problem | null>(null)
@@ -50,22 +88,20 @@ export default function WorkspacePage() {
     setIsLoadingProblem(true)
     setLoadError(null)
     try {
-      const { problem: p, session_id } = await api.getCurrentProblem()
+      const { problem: p, session_id } = slug
+        ? await api.getProblem(slug)
+        : await api.getCurrentProblem()
       setProblem(p)
       setSessionId(session_id)
       const fileMap = new Map(Object.entries(p.files))
       setFiles(fileMap)
-      // Set active file to first non-test .py file
-      const firstPy = [...fileMap.keys()].find(
-        (k) => k.endsWith('.py') && !k.includes('test') && !k.includes('hidden'),
-      )
-      setActiveFile(firstPy ?? [...fileMap.keys()][0] ?? '')
+      setActiveFile(pickInitialFile([...fileMap.keys()]))
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load problem')
     } finally {
       setIsLoadingProblem(false)
     }
-  }, [])
+  }, [slug])
 
   // Load user, then decide whether to show track modal or load problem
   useEffect(() => {
@@ -263,7 +299,8 @@ export default function WorkspacePage() {
             {activeFile ? (
               <Editor
                 height="100%"
-                language="python"
+                path={activeFile}
+                language={languageForFile(activeFile)}
                 value={files.get(activeFile) ?? ''}
                 onChange={handleEditorChange}
                 theme="vs-dark"

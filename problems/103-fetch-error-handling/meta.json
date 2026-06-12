@@ -1,0 +1,14 @@
+{
+  "slug": "103-fetch-error-handling",
+  "title": "Handle API failures in the user list page",
+  "description": "# Issue #121 - Blank page when the API is down\n\nWhen /api/users returns a 500 or the network drops, the user list page just stays blank and an exception lands in the console. starter/app.js already has a showError() helper and an #error-box element, but loadUsers() never uses them.\n\n**Acceptance criteria:**\n- check response.ok (or the status code) before parsing the body\n- catch network failures (try/catch or .catch)\n- surface a human-readable message via showError() in both failure modes",
+  "difficulty": "mid",
+  "category": "error-handling",
+  "track": "frontend",
+  "language": "javascript",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 13,
+  "optimal_hint": "Ideal: wrap the await calls in try/catch, check if (!response.ok) and call showError with the status before returning, and call showError again in the catch block for network errors. response.json() must only run after the ok check."
+}

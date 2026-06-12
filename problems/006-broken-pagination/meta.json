@@ -1,0 +1,14 @@
+{
+  "slug": "006-broken-pagination",
+  "title": "Fix pagination skipping the first page of results",
+  "description": "# Issue #31 - Pagination returns the wrong items\n\nUsers report that the first page of /api/items never shows the first products, and the reported total_pages is wrong (the last partial page is missing).\n\nExample: GET /api/items?page=1&page_size=10 should return items 1-10, but it returns items 11-19.\n\n**Acceptance criteria:**\n- page is 1-based: page=1 returns the first page_size items\n- the last page returns the remaining items\n- total_pages rounds UP (25 items / 10 per page = 3 pages)",
+  "difficulty": "junior",
+  "category": "api-design",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 30,
+  "points": 100,
+  "display_order": 6,
+  "optimal_hint": "The fix is start = (page - 1) * page_size, end = start + page_size, and total_pages = math.ceil(total / page_size). Watch for students who fix the slice but leave integer division for total_pages."
+}

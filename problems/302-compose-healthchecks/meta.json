@@ -1,0 +1,14 @@
+{
+  "slug": "302-compose-healthchecks",
+  "title": "Stop the API racing the database at startup",
+  "description": "# Issue #224 - 'connection refused' on every deploy\n\nEvery deploy the web container starts before Postgres is ready and crash-loops with 'connection refused'. depends_on in starter/docker-compose.yml only waits for the container to START, not for the database to be READY. The db image is also unpinned.\n\n**Acceptance criteria:**\n- the db service defines a healthcheck (pg_isready) with an interval and retries\n- web uses the long-form depends_on with condition: service_healthy\n- the postgres image is pinned to a specific tag (no :latest)\n- both services have a restart policy (unless-stopped or always)",
+  "difficulty": "junior",
+  "category": "orchestration",
+  "track": "devops",
+  "language": "yaml",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 35,
+  "points": 100,
+  "display_order": 22,
+  "optimal_hint": "Ideal: db healthcheck test: ['CMD-SHELL', 'pg_isready -U app'] with interval/timeout/retries, web depends_on: {db: {condition: service_healthy}}, postgres pinned (e.g. postgres:16-alpine), restart: unless-stopped on both. Watch for students who add a sleep in the web command instead."
+}

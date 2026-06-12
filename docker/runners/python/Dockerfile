@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
         sqlalchemy==2.0.36 \
         asyncpg==0.29.0 \
         aiofiles==24.1.0 \
-        httpx==0.27.2
+        httpx==0.27.2 \
+        pyyaml==6.0.2
 
 WORKDIR /workspace
 

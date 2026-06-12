@@ -1,0 +1,14 @@
+{
+  "slug": "205-token-refresh",
+  "title": "Fix refresh tokens that never expire, rotate, or validate",
+  "description": "# Issue #90 - Stolen refresh tokens work forever\n\nSecurity review of our auth flow found that POST /api/auth/refresh hands out new access tokens for ANY string, never expires refresh tokens, and never rotates them - a stolen token grants access forever.\n\n**Acceptance criteria:**\n- refresh tokens unknown to the server are rejected with 401\n- a successful refresh ROTATES the token: it returns a new refresh_token and the old one stops working\n- refresh tokens older than REFRESH_TTL seconds are rejected with 401 (keep using the module-level REFRESH_TTL constant)",
+  "difficulty": "senior",
+  "category": "auth",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 75,
+  "points": 200,
+  "display_order": 20,
+  "optimal_hint": "Ideal: look the token up in REFRESH_TOKENS (401 if absent), check time.time() - entry['created_at'] > REFRESH_TTL reading REFRESH_TTL at call time (401 + delete if expired), then pop the old token and issue/store a fresh one. Watch for solutions that validate but forget to delete the old token (no rotation)."
+}

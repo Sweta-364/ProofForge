@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage'
 import WorkspacePage from './pages/WorkspacePage'
 import ReviewPage from './pages/ReviewPage'
 import PortfolioPage from './pages/PortfolioPage'
+import ProfilePage from './pages/ProfilePage'
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem('pf_token')
@@ -39,6 +40,22 @@ export default function AppRouter() {
         element={
           <PrivateRoute>
             <WorkspacePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/workspace/:slug"
+        element={
+          <PrivateRoute>
+            <WorkspacePage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <ProfilePage />
           </PrivateRoute>
         }
       />

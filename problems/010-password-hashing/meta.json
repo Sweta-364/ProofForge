@@ -1,0 +1,14 @@
+{
+  "slug": "010-password-hashing",
+  "title": "Stop storing user passwords in plaintext",
+  "description": "# Issue #18 - Database dump leaked every user's password\n\nA staging database dump was shared externally and it contained every user's password in plaintext. The user store must never persist raw passwords.\n\n**Acceptance criteria:**\n- register() stores a bcrypt hash, never the plaintext\n- verify() still authenticates correct passwords and rejects wrong ones\n- two users with the same password must not share the same stored value (salting)",
+  "difficulty": "junior",
+  "category": "security",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 35,
+  "points": 100,
+  "display_order": 10,
+  "optimal_hint": "Ideal: bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode() on register, bcrypt.checkpw on verify. Hashing with md5/sha256 without salt should score poorly even if some tests pass."
+}

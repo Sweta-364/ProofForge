@@ -1,0 +1,14 @@
+{
+  "slug": "303-ci-pipeline-fix",
+  "title": "Fix the broken CI workflow (trigger, checkout, leaked secret)",
+  "description": "# Issue #233 - CI never runs and a live API token is committed\n\nThree problems with starter/.github/workflows/ci.yml:\n1. The workflow never triggers: 'on: pull-request' is not a valid event (and pushes to main are not covered).\n2. Even if it ran, there is no actions/checkout step, so there is no code to test.\n3. A LIVE token is hardcoded in the env block - it must come from GitHub Actions secrets.\n\n**Acceptance criteria:**\n- triggers on push (to main) and pull_request\n- the first step checks out the repository (actions/checkout)\n- no hardcoded token anywhere; use the secrets context",
+  "difficulty": "mid",
+  "category": "ci-cd",
+  "track": "devops",
+  "language": "yaml",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 23,
+  "optimal_hint": "Ideal: on: {push: {branches: [main]}, pull_request: {}}; a uses: actions/checkout@v4 step before setup-python; API_TOKEN: ${{ secrets.API_TOKEN }}. Note: yaml.safe_load parses the bare key 'on' as boolean True - the tests handle both."
+}

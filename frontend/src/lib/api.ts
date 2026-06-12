@@ -6,6 +6,7 @@ import type {
   Review,
   PortfolioCard,
   ProgressResponse,
+  ActivityResponse,
 } from '../types'
 
 class ApiClient {
@@ -67,6 +68,14 @@ class ApiClient {
 
   getCurrentProblem(): Promise<CurrentProblemResponse> {
     return this.request<CurrentProblemResponse>('/problems/current')
+  }
+
+  getProblem(slug: string): Promise<CurrentProblemResponse> {
+    return this.request<CurrentProblemResponse>(`/problems/${encodeURIComponent(slug)}`)
+  }
+
+  getActivity(): Promise<ActivityResponse> {
+    return this.request<ActivityResponse>('/users/me/activity')
   }
 
   runTests(sessionId: string, files: Record<string, string>): Promise<TestRun> {

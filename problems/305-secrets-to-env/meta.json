@@ -1,0 +1,14 @@
+{
+  "slug": "305-secrets-to-env",
+  "title": "Move hardcoded production secrets into environment variables",
+  "description": "# Issue #250 - Production credentials committed to the repository\n\nstarter/settings.py contains the production database password and a live API key, and DEBUG defaults to True in production. Rotate-and-remove is already underway; your job is the code fix.\n\n**Acceptance criteria:**\n- DATABASE_URL, API_KEY and DEBUG are read from environment variables (os.environ)\n- no secret literal remains in the source (no password, no sk-live key)\n- DEBUG defaults to False when unset and parses common truthy strings ('1', 'true', 'yes')\n- safe defaults only: the fallback DATABASE_URL must not embed credentials",
+  "difficulty": "senior",
+  "category": "security",
+  "track": "devops",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 60,
+  "points": 200,
+  "display_order": 25,
+  "optimal_hint": "Ideal: os.environ.get('DATABASE_URL', 'postgresql://localhost:5432/shop'), os.environ.get('API_KEY', ''), DEBUG parsed via os.environ.get('DEBUG', 'false').lower() in ('1', 'true', 'yes'). The getters must reflect the module-level values; tests reload the module with patched env vars."
+}

@@ -4,11 +4,9 @@ The submission pipeline is a background asyncio task that streams progress via
 Redis pub/sub → WebSocket.
 """
 import asyncio
-import io
 import json
 import logging
 import shutil
-import tarfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +18,7 @@ from app import db, minio as minio_module
 from app.auth.dependencies import get_current_user
 from app.config import settings
 from app.redis import get_redis
+from app.tar_utils import extract_tar_to_dict
 from sandbox.runner import sandbox_runner
 from app.submissions.review_pipeline import review_pipeline
 from app.portfolio.generator import generate_portfolio_card
@@ -374,30 +373,8 @@ async def _process_submission(
 # ── Helper functions ───────────────────────────────────────────────────────────
 
 def _extract_tar_to_dict(tar_bytes: bytes) -> dict[str, str]:
-    """Extract a tar.gz bytes blob → {relative_path: file_content} for .py files only."""
-    result: dict[str, str] = {}
-    try:
-        with tarfile.open(fileobj=io.BytesIO(tar_bytes)) as tar:
-            count = 0
-            for member in tar.getmembers():
-                if count >= 50:
-                    break
-                if not member.isfile():
-                    continue
-                if not member.name.endswith(".py"):
-                    continue
-                # Skip hidden test directory
-                parts = Path(member.name).parts
-                if "hidden" in parts:
-                    continue
-                f = tar.extractfile(member)
-                if f is None:
-                    continue
-                result[member.name] = f.read().decode("utf-8", errors="replace")
-                count += 1
-    except Exception as e:
-        logger.warning("Failed to extract tar: %s", e)
-    return result
+    """Extract a tar.gz bytes blob → {relative_path: file_content}."""
+    return extract_tar_to_dict(tar_bytes)
 
 
 def _calculate_fallback_score(

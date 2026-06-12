@@ -1,0 +1,14 @@
+{
+  "slug": "104-debounce-search",
+  "title": "Fix the broken debounce flooding the search API",
+  "description": "# Issue #130 - Search fires one request per keystroke\n\nTyping 'mechanical keyboard' in the search box fires 19 API requests. starter/debounce.js wraps the handler in debounce(fn, 300) but the implementation never cancels the previous timer, so every keystroke still schedules its own call.\n\n**Acceptance criteria:**\n- store the timer handle returned by setTimeout\n- clearTimeout the previous timer before scheduling a new one\n- the wrapped function still receives the original arguments after the delay",
+  "difficulty": "mid",
+  "category": "performance",
+  "track": "frontend",
+  "language": "javascript",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 40,
+  "points": 150,
+  "display_order": 14,
+  "optimal_hint": "Ideal: keep let timerId in the closure, call clearTimeout(timerId) at the top of the returned function, then timerId = setTimeout(...). Preserving this/args via fn.apply(this, args) is the polished version."
+}

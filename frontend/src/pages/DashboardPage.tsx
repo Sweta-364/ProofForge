@@ -96,6 +96,21 @@ export default function DashboardPage() {
 
   const solvedCount = progress.problems.filter((p) => p.solved).length
   const totalCount = progress.problems.length
+
+  // Group problems by track, user's own track first
+  const problemsByTrack = progress.problems.reduce<Record<string, typeof progress.problems>>(
+    (acc, p) => {
+      const track = p.track ?? 'backend'
+      ;(acc[track] ??= []).push(p)
+      return acc
+    },
+    {},
+  )
+  const trackOrder = [
+    ...(user.career_track ? [user.career_track] : []),
+    ...TRACKS.filter((t) => t !== user.career_track),
+    ...Object.keys(problemsByTrack).filter((t) => !TRACKS.includes(t)),
+  ]
   const scores = progress.problems
     .map((p) => p.best_score)
     .filter((s): s is number => s !== null)
@@ -205,39 +220,73 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Problem progress */}
+        {/* Problem bank, grouped by track */}
         <section>
           <h2 className="text-sm font-semibold text-[#8b949e] uppercase tracking-wider mb-3">
             Problems
           </h2>
-          <div className="bg-[#161b22] border border-[#30363d] rounded-xl divide-y divide-[#21262d]">
-            {progress.problems.length === 0 && (
+          {progress.problems.length === 0 && (
+            <div className="bg-[#161b22] border border-[#30363d] rounded-xl">
               <p className="p-4 text-sm text-[#8b949e]">No problems available yet.</p>
-            )}
-            {progress.problems.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                {p.solved ? (
-                  <CheckCircle size={16} className="text-[#3fb950] shrink-0" />
-                ) : (
-                  <Circle size={16} className="text-[#30363d] shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{p.title}</p>
-                  <p className="text-xs text-[#8b949e]">
-                    {p.category}
-                    {p.attempts > 0 && ` · ${p.attempts} attempt${p.attempts > 1 ? 's' : ''}`}
-                  </p>
+            </div>
+          )}
+          <div className="space-y-6">
+            {trackOrder
+              .filter((track) => problemsByTrack[track]?.length)
+              .map((track) => (
+                <div key={track}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xs font-semibold text-[#e6edf3] uppercase tracking-wider">
+                      {TRACK_LABELS[track] ?? track}
+                    </h3>
+                    <span className="text-xs text-[#8b949e]">
+                      {problemsByTrack[track].filter((p) => p.solved).length}/
+                      {problemsByTrack[track].length} solved
+                    </span>
+                    {track === user.career_track && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0d2e4d] text-[#58a6ff] font-medium">
+                        your track
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl divide-y divide-[#21262d]">
+                    {problemsByTrack[track].map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/workspace/${p.slug}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#1c2128] transition-colors group"
+                      >
+                        {p.solved ? (
+                          <CheckCircle size={16} className="text-[#3fb950] shrink-0" />
+                        ) : (
+                          <Circle size={16} className="text-[#30363d] shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate group-hover:text-[#58a6ff] transition-colors">
+                            {p.title}
+                          </p>
+                          <p className="text-xs text-[#8b949e]">
+                            {p.category}
+                            {p.attempts > 0 && ` · ${p.attempts} attempt${p.attempts > 1 ? 's' : ''}`}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${DIFFICULTY_COLORS[p.difficulty] ?? 'bg-[#1c2128] text-[#8b949e]'}`}
+                        >
+                          {p.difficulty}
+                        </span>
+                        <span className="text-xs text-[#8b949e] w-16 text-right shrink-0">
+                          {p.best_score !== null ? `${p.best_score}/100` : '—'}
+                        </span>
+                        <ChevronRight
+                          size={14}
+                          className="text-[#30363d] group-hover:text-[#8b949e] shrink-0"
+                        />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${DIFFICULTY_COLORS[p.difficulty] ?? 'bg-[#1c2128] text-[#8b949e]'}`}
-                >
-                  {p.difficulty}
-                </span>
-                <span className="text-xs text-[#8b949e] w-16 text-right shrink-0">
-                  {p.best_score !== null ? `${p.best_score}/100` : '—'}
-                </span>
-              </div>
-            ))}
+              ))}
           </div>
         </section>
 
