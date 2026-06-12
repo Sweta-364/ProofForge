@@ -1,0 +1,14 @@
+{
+  "slug": "002-input-validation",
+  "title": "Login endpoint returns 500 when password contains special characters",
+  "description": "# Issue #34 â€” 500 Internal Server Error on Login\n\nUsers are reporting that login fails with a 500 error when their password contains special characters like @, #, &, +, or spaces. Normal passwords work fine.\n\n**To reproduce:**\n```\nPOST /api/auth/login\n{\"username\": \"alice\", \"password\": \"pass@word#1\"}\n```\nReturns 500. But:\n```\n{\"username\": \"alice\", \"password\": \"password\"}\n```\nReturns 200.\n\nThe error in logs is: `UnicodeEncodeError: 'ascii' codec can't encode character`\n\n**Acceptance criteria:** Login works with any valid UTF-8 password including special characters. Proper error (401) returned for wrong credentials, never 500.",
+  "difficulty": "junior_plus",
+  "category": "debugging",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 45,
+  "points": 150,
+  "display_order": 2,
+  "optimal_hint": "Bug is in the password hashing â€” the code does password.encode('ascii') before bcrypt hash comparison, which fails for non-ASCII characters (accented letters, emoji, etc.). Fix: use password.encode('utf-8') everywhere. Also the error handler is missing â€” a 500 should never reach the client for a login failure. Add proper try/except and return 401 for invalid credentials."
+}

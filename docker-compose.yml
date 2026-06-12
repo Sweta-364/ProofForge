@@ -1,0 +1,114 @@
+networks:
+  proofforge:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    networks: [proofforge]
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-proofforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB:       ${POSTGRES_DB:-proofforge}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Runs 001_initial.sql automatically on first container init
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"   # host access for seed scripts and tests
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-proofforge} -d ${POSTGRES_DB:-proofforge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    networks: [proofforge]
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
+    ports:
+      - "6379:6379"   # host access for seed scripts and tests
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # ── MinIO ──────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    networks: [proofforge]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-miniopassword}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"   # S3 API — host access for seed scripts and tests
+      - "9001:9001"   # Admin console (restrict to internal in prod)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Sandbox temp dir permissions ───────────────────────────────────────────
+  # The /tmp/submissions bind mount is created root-owned inside the Docker
+  # Desktop VM; the API runs as uid 1001 and needs write access.
+  sandbox-perms:
+    image: python:3.12-slim
+    user: "0:0"
+    command: ["chmod", "1777", "/tmp/submissions"]
+    volumes:
+      - /tmp/submissions:/tmp/submissions
+    restart: "no"
+
+  # ── FastAPI backend ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    networks: [proofforge]
+    env_file: .env
+    # Docker Desktop exposes /var/run/docker.sock as root:root 660;
+    # grant the non-root app user access via the socket's group (0)
+    group_add:
+      - "0"
+    environment:
+      # Override hostnames to use Docker service names
+      DATABASE_URL: postgresql://${POSTGRES_USER:-proofforge}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-proofforge}
+      REDIS_URL:    redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker SDK for sandbox management
+      - /tmp/submissions:/tmp/submissions           # Shared I/O volume for sandbox containers
+      - ./problems:/app/problems:ro                 # so seed scripts can run in-container
+      - ./scripts:/app/scripts:ro                   # (dev.ps1 runs them via compose exec)
+    depends_on:
+      sandbox-perms:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped

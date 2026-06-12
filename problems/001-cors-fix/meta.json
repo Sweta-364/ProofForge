@@ -1,0 +1,14 @@
+{
+  "slug": "001-cors-fix",
+  "title": "Fix CORS error preventing frontend from calling the API",
+  "description": "# Issue #12 â€” CORS Error on all API calls\n\nOur React frontend at localhost:3000 cannot call any API endpoint. Every request fails with:\n\n```\nAccess to fetch at 'http://localhost:8000/api/users' from origin 'http://localhost:3000' \nhas been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present.\n```\n\nThis is blocking our entire frontend team. The backend is FastAPI. Fix it properly â€” \ndon't just allow all origins with '*', configure it correctly for our frontend origin.\n\n**Acceptance criteria:** The frontend at localhost:3000 can call GET /api/users and \nreceive a response. OPTIONS preflight requests must also succeed.",
+  "difficulty": "junior",
+  "category": "configuration",
+  "track": "fullstack",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 30,
+  "points": 100,
+  "display_order": 1,
+  "optimal_hint": "Solution requires adding FastAPI CORSMiddleware with allow_origins=['http://localhost:3000'], allow_credentials=True, allow_methods=['*'], allow_headers=['*']. The student should NOT use allow_origins=['*'] â€” that's the lazy fix. The ideal solution uses the specific origin."
+}

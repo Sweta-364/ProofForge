@@ -1,0 +1,14 @@
+{
+  "slug": "005-race-condition",
+  "title": "WebSocket notification handler sends duplicate messages under concurrent load",
+  "description": "# Issue #201 â€” Duplicate Notifications in WebSocket Feed\n\nUsers are receiving 2-3 duplicate notifications for the same event. This only happens under load (multiple concurrent users). Single-user testing shows no issue.\n\n**Symptoms:**\n- User receives 'Your submission is complete' notification 2-3 times\n- Only occurs with 5+ concurrent connections\n- Intermittent â€” not reproducible every time\n\n**Root cause area:** The notification_manager.py in our WebSocket handler.\n\n**Attempted fix:** We added a `sent_ids` set to deduplicate â€” but duplicates still appear.\n\n**Acceptance criteria:** Under 20 concurrent connections each receiving 10 notifications, zero duplicate notifications delivered. The sent_ids deduplication must be race-condition-safe.",
+  "difficulty": "senior",
+  "category": "concurrency",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 120,
+  "points": 400,
+  "display_order": 5,
+  "optimal_hint": "Bug: sent_ids is a plain set accessed from multiple async coroutines without a lock. The check-then-add (if id not in sent_ids: sent_ids.add(id)) is a TOCTOU race condition â€” two coroutines can both pass the check before either adds to the set, resulting in both sending the notification. The await asyncio.sleep(0) between the check and add makes this reproducible. Fix: wrap the check-and-add in asyncio.Lock(). The lock must be acquired before checking AND held through the add operation."
+}

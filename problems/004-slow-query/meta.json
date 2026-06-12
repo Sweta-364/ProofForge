@@ -1,0 +1,14 @@
+{
+  "slug": "004-slow-query",
+  "title": "User list endpoint takes 2.3 seconds â€” causing frontend timeouts",
+  "description": "# Issue #112 â€” GET /api/users/search is too slow\n\nThe user search endpoint takes 2.3 seconds average response time. Frontend is timing out at 2 seconds. This is blocking the recruiter dashboard feature.\n\n**Profiling shows:** The bottleneck is the database query in user_service.py.\n\n**Current query performance:**\n- 10,000 users in DB\n- Average query time: 2.3 seconds\n- P99 query time: 4.1 seconds\n\n**Acceptance criteria:** \n- GET /api/users/search?q=alice returns correct results\n- Response time under 100ms for a 10,000 row table\n- Must use parameterized queries (no string formatting into SQL)\n- Must handle empty search string gracefully",
+  "difficulty": "mid_plus",
+  "category": "optimization",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 90,
+  "points": 300,
+  "display_order": 4,
+  "optimal_hint": "Three bugs: (1) String formatting into SQL â€” f'WHERE username LIKE \"%{search}%\"' is SQL injection and prevents the query planner from caching. (2) No index on username column â€” add CREATE INDEX idx_users_username ON users(username). (3) Full table scan: LIKE '%term%' with leading wildcard can't use B-tree index. Fix with LIKE 'term%' (prefix match) or FTS. Fix all three: parameterized query + index + prefix-match LIKE. The test seeds 10k rows and measures actual query time."
+}

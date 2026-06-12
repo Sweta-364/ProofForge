@@ -1,0 +1,134 @@
+version: "3.9"
+
+networks:
+  proofforge:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+services:
+  # ── PostgreSQL (internal only) ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    networks: [proofforge]
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-proofforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB:-proofforge}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-proofforge} -d ${POSTGRES_DB:-proofforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # ── Redis (internal only) ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    networks: [proofforge]
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 320m
+
+  # ── MinIO (internal only) ──────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    networks: [proofforge]
+    command: server /data
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: always
+
+  # ── FastAPI backend (4 workers, no hot-reload) ─────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    networks: [proofforge]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-proofforge}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-proofforge}
+      REDIS_URL:    redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --proxy-headers
+        --forwarded-allow-ips='*'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/submissions:/tmp/submissions
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  # ── React frontend served by nginx ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks: [proofforge]
+    depends_on:
+      - api
+    restart: always
+
+  # ── nginx reverse proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    networks: [proofforge]
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: always

@@ -1,0 +1,14 @@
+{
+  "slug": "003-memory-leak",
+  "title": "Memory leak in JWT authentication middleware causes server crash after 6 hours",
+  "description": "# Issue #89 â€” Production Server Crashes Every 6-8 Hours\n\nOur production FastAPI server starts at ~150MB memory and grows to 2GB+ before crashing. After profiling, we identified the leak is in the JWT authentication middleware.\n\n**Symptoms:**\n- Memory grows linearly with number of requests\n- Never stabilizes\n- Server must be restarted every 6-8 hours\n- Affects all authenticated endpoints\n\n**To reproduce:** Run the included load_test.py for 30 seconds and watch memory grow.\n\n**Investigated:** We tried adding `gc.collect()` calls â€” didn't help. The leak persists.\n\n**Acceptance criteria:** Memory stabilizes under sustained load. The cache must have a maximum size and entries must expire. After running load_test.py for 60 seconds, memory usage must not exceed 2x the starting memory.",
+  "difficulty": "mid",
+  "category": "debugging",
+  "track": "backend",
+  "language": "python",
+  "docker_image": "proofforge/python-runner:3.12",
+  "time_limit_mins": 90,
+  "points": 250,
+  "display_order": 3,
+  "optimal_hint": "Bug: _token_cache is a plain dict that grows forever â€” tokens are added but never removed. Fix: replace with cachetools.TTLCache(maxsize=1000, ttl=300). Secondary issue: the cache is module-level mutable state accessed from async context â€” should wrap access in asyncio.Lock() for thread safety. Best solution uses TTLCache + asyncio.Lock. A plain TTLCache without the lock passes tests but has a race condition under high concurrency."
+}
