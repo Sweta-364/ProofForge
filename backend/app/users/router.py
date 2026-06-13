@@ -41,6 +41,7 @@ async def get_progress(current_user: dict = Depends(get_current_user)):
         LEFT   JOIN submissions s
                ON s.problem_id = p.id AND s.user_id = $1
         WHERE  p.is_active = TRUE
+          AND  (p.owner_user_id IS NULL OR p.owner_user_id = $1::uuid)
         GROUP  BY p.id
         ORDER  BY p.display_order
         """,

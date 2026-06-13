@@ -5,10 +5,12 @@ full starter codebase extracted from MinIO) for the authenticated user.
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from app import db, minio as minio_module
 from app.auth.dependencies import get_current_user
 from app.tar_utils import extract_tar_to_dict
+from app.problems.generate import generate_problem_for_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["problems"])
@@ -32,6 +34,7 @@ async def list_problems(current_user: dict = Depends(get_current_user)):
         LEFT   JOIN submissions s
                ON s.problem_id = p.id AND s.user_id = $1
         WHERE  p.is_active = TRUE
+          AND  (p.owner_user_id IS NULL OR p.owner_user_id = $1::uuid)
         GROUP  BY p.id
         ORDER  BY p.display_order
         """,
@@ -93,6 +96,7 @@ async def get_current_problem(current_user: dict = Depends(get_current_user)):
         SELECT p.*
         FROM   problems p
         WHERE  p.is_active = TRUE
+          AND  p.owner_user_id IS NULL
           AND  p.id NOT IN (
                    SELECT problem_id FROM submissions
                    WHERE  user_id = $1
@@ -129,6 +133,39 @@ async def get_problem_by_slug(
         raise HTTPException(status_code=404, detail="Problem not found")
 
     session_id = await _open_session(user_id, str(problem["id"]))
+    return _problem_response(session_id, problem)
+
+
+class GenerateRequest(BaseModel):
+    topic: str = Field(..., min_length=3, max_length=200)
+
+
+@router.post("/problems/generate", status_code=201)
+async def generate_problem(
+    body: GenerateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Generate a personalized coding problem with AI (Gemini), upload it to MinIO,
+    store it in the DB, and open a session — all in one request.
+    Returns the same shape as GET /problems/{slug}.
+    """
+    user_id = str(current_user["id"])
+    github_login = current_user["github_login"]
+
+    try:
+        result = await generate_problem_for_user(
+            topic=body.topic,
+            user_id=user_id,
+            github_login=github_login,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+    session_id = await _open_session(user_id, result["problem_id"])
+    problem = await db.fetchrow("SELECT * FROM problems WHERE id = $1::uuid", result["problem_id"])
     return _problem_response(session_id, problem)
 
 

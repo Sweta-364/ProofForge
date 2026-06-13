@@ -139,6 +139,10 @@ export interface ProblemProgress {
   attempts: number
 }
 
+export interface GenerateProblemRequest {
+  topic: string
+}
+
 export interface ActivityDay {
   date: string
   count: number

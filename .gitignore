@@ -6,6 +6,7 @@
 CLAUDE.md
 .claude/
 firstPrompt.md
+production.md
 
 # Local dev artifacts
 .sandbox-tmp/

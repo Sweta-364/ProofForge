@@ -12,6 +12,7 @@ from app.submissions import router as submissions_router
 from app.websocket import router as websocket_router
 from app.portfolio import router as portfolio_router
 from app.problems import router as problems_router
+from app.terminal import router as terminal_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,3 +57,4 @@ app.include_router(submissions_router.router, prefix="/api/v1")
 app.include_router(websocket_router.router, prefix="/api/v1")
 app.include_router(portfolio_router.router, prefix="/api/v1")
 app.include_router(problems_router.router, prefix="/api/v1")
+app.include_router(terminal_router.router, prefix="/api/v1")

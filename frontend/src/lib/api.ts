@@ -7,6 +7,7 @@ import type {
   PortfolioCard,
   ProgressResponse,
   ActivityResponse,
+  GenerateProblemRequest,
 } from '../types'
 
 class ApiClient {
@@ -105,6 +106,13 @@ class ApiClient {
 
   getPortfolio(githubLogin: string): Promise<PortfolioCard> {
     return this.request<PortfolioCard>(`/portfolio/${githubLogin}`)
+  }
+
+  generateProblem(body: GenerateProblemRequest): Promise<CurrentProblemResponse> {
+    return this.request<CurrentProblemResponse>('/problems/generate', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
   }
 }
 

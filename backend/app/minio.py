@@ -54,5 +54,11 @@ def download_file(bucket: str, key: str) -> bytes:
         response.release_conn()
 
 
+def upload_bytes(bucket: str, key: str, data: bytes, content_type: str = "application/gzip") -> None:
+    """Upload raw bytes to MinIO (no temp file on disk)."""
+    import io as _io
+    _client.put_object(bucket, key, _io.BytesIO(data), length=len(data), content_type=content_type)
+
+
 def get_presigned_url(bucket: str, key: str, expires: int = 3600) -> str:
     return _client.presigned_get_object(bucket, key, expires=timedelta(seconds=expires))

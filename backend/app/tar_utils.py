@@ -49,3 +49,15 @@ def extract_tar_to_dict(tar_bytes: bytes) -> dict[str, str]:
     except Exception as e:
         logger.warning("Tar extraction failed: %s", e)
     return result
+
+
+def create_tar_from_dict(files: dict[str, str]) -> bytes:
+    """Pack a {relative_path: text_content} dict into an in-memory tar.gz blob."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for path, content in files.items():
+            encoded = content.encode("utf-8")
+            info = tarfile.TarInfo(name=path)
+            info.size = len(encoded)
+            tar.addfile(info, io.BytesIO(encoded))
+    return buf.getvalue()

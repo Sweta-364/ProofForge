@@ -267,39 +267,54 @@ REVIEWER NOTE (not shown to student):
         self, test_results: dict, ast_output: dict, security_output: dict
     ) -> dict:
         """Deterministic schema-valid review built from pipeline signals —
-        lets the full submit→review→portfolio flow run with no LLM key."""
+        lets the full submit→review→portfolio flow run with no LLM key.
+        Field names and max values match REVIEW_SYSTEM_PROMPT exactly."""
+        total = max(test_results.get("total", 1), 1)
+        passed = test_results.get("passed", 0)
+        pass_rate = passed / total
         all_passed = test_results.get("failed", 1) == 0
-        correctness = 30 if all_passed else 10
-        code_quality = min(25, ast_output.get("overall_ast_score", 0) // 4)
-        security = min(20, security_output.get("security_score", 0))
-        testing = 15 if all_passed else 5
-        overall = correctness + code_quality + security + testing
+
+        correctness = int(pass_rate * 30)               # 0-30
+        code_quality = min(25, ast_output.get("overall_ast_score", 100) // 4)  # 0-25
+        performance = 10                                  # 0-20 (no profiling in mock)
+        security = min(15, security_output.get("security_score", 15))           # 0-15
+        tests = int(pass_rate * 10)                       # 0-10
+        overall = min(100, correctness + code_quality + performance + security + tests)
+
+        if overall >= 85:
+            verdict = "accept"
+        elif overall >= 60:
+            verdict = "minor_revisions"
+        else:
+            verdict = "major_revisions"
+
         return {
-            "verdict": "accept" if all_passed and overall >= 60 else "major_revisions",
+            "verdict": verdict,
             "overall_score": overall,
             "score_breakdown": {
                 "correctness": correctness,
                 "code_quality": code_quality,
+                "performance": performance,
                 "security": security,
-                "testing": testing,
+                "tests": tests,
             },
             "summary": (
-                "[MOCK REVIEW — REVIEW_PROVIDER=mock] "
+                "[MOCK REVIEW — set REVIEW_PROVIDER=openai_compat for real AI feedback] "
                 + (
                     "All tests pass and no blocking issues were detected."
                     if all_passed
-                    else f"{test_results.get('failed', '?')} test(s) still failing — fix them before resubmitting."
+                    else f"{test_results.get('failed', '?')} test(s) still failing — fix the bug and resubmit."
                 )
             ),
             "inline_comments": [],
             "learning_resources": [
                 {
-                    "title": "ProofForge mock review mode",
-                    "url": "https://localhost/dev-docs",
-                    "relevance": "Set REVIEW_PROVIDER=openai_compat or anthropic for real AI reviews",
+                    "title": "Enable real AI reviews with a free Groq key",
+                    "url": "https://console.groq.com",
+                    "why": "Set REVIEW_PROVIDER=openai_compat and DEV_LLM_API_KEY in .env for real code review feedback.",
                 }
             ],
-            "architectural_note": "Generated without an LLM (dev mock mode).",
+            "architectural_note": "Mock review — scores derived from test results, AST analysis, and security scan only.",
         }
 
 

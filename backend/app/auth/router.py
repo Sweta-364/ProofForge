@@ -24,7 +24,7 @@ async def github_login():
     url = (
         "https://github.com/login/oauth/authorize"
         f"?client_id={settings.GITHUB_CLIENT_ID}"
-        "&scope=read:user,user:email"
+        "&scope=repo,read:user,user:email"
         f"&state={state}"
     )
     return RedirectResponse(url=url, status_code=302)
@@ -68,13 +68,14 @@ async def github_callback(code: str, state: str):
 
     user = await db.fetchrow(
         """
-        INSERT INTO users (github_id, github_login, name, email, avatar_url)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO users (github_id, github_login, name, email, avatar_url, github_access_token)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (github_id) DO UPDATE SET
-            github_login   = EXCLUDED.github_login,
-            name           = EXCLUDED.name,
-            avatar_url     = EXCLUDED.avatar_url,
-            last_active_at = NOW()
+            github_login         = EXCLUDED.github_login,
+            name                 = EXCLUDED.name,
+            avatar_url           = EXCLUDED.avatar_url,
+            github_access_token  = EXCLUDED.github_access_token,
+            last_active_at       = NOW()
         RETURNING id, github_login
         """,
         str(user_data["id"]),
@@ -82,6 +83,7 @@ async def github_callback(code: str, state: str):
         user_data.get("name") or user_data["login"],
         email,
         user_data.get("avatar_url"),
+        access_token,
     )
 
     token = _make_jwt(str(user["id"]), user["github_login"])

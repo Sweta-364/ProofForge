@@ -69,15 +69,33 @@ Local dev works fully without these. Add them to `.env` only if you want the pro
 
 then set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `.env`.
 
-**Real AI reviews** — pick one in `.env`:
+**Real AI reviews + "Create for me" problem generation** — both use the same free Groq key:
 
 | `REVIEW_PROVIDER`        | Needs                                                       | Notes                                                     |
 | ------------------------ | ----------------------------------------------------------- | --------------------------------------------------------- |
 | `mock` (default for dev) | nothing                                                     | Deterministic review built from test/AST/security results |
-| `openai_compat`          | free key from https://console.groq.com in `DEV_LLM_API_KEY` | Real LLM review, free tier                                |
+| `openai_compat`          | free key from https://console.groq.com in `DEV_LLM_API_KEY` | Real LLM review **and** problem generation — free tier   |
 | `anthropic`              | `ANTHROPIC_API_KEY`                                         | Production setting — Claude Sonnet                        |
 
+To enable real AI reviews and personalized problem generation in one step:
+
+```env
+# In .env:
+REVIEW_PROVIDER=openai_compat
+DEV_LLM_BASE_URL=https://api.groq.com/openai/v1
+DEV_LLM_API_KEY=gsk_your_key_here      # free at https://console.groq.com (no card)
+DEV_LLM_MODEL=llama-3.3-70b-versatile
+```
+
+Then `docker compose restart api`. One key powers both code reviews and the "Create for me" dashboard button.
+
 Before deploying anywhere: set `DEV_MODE=false` (removes the dev-login bypass) and `REVIEW_PROVIDER=anthropic`.
+
+### "Create for me" — personalized problem generation
+
+On the dashboard, click **"Create for me"**, describe what you want to practice (e.g. "rate limiting", "JWT authentication", "database connection pooling"), and the system generates a complete broken FastAPI codebase with pytest tests tailored to your topic. The generated problem goes through the exact same sandbox → AI review → portfolio pipeline as the curated problems.
+
+Requirements: `DEV_LLM_API_KEY` set and `REVIEW_PROVIDER=openai_compat` (see above). Free Groq tier supports ~125 problem generations per day.
 
 ---
 

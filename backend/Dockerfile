@@ -1,5 +1,11 @@
 FROM python:3.12-slim
 
+# git + ssh client for the browser terminal's git push support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Security: run as non-root
 RUN groupadd --gid 1001 appgroup && \
     useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser

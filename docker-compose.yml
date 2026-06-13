@@ -74,9 +74,10 @@ services:
   sandbox-perms:
     image: python:3.12-slim
     user: "0:0"
-    command: ["chmod", "1777", "/tmp/submissions"]
+    command: ["sh", "-c", "chmod 1777 /tmp/submissions && chmod 1777 /tmp/proofforge_terminal"]
     volumes:
       - /tmp/submissions:/tmp/submissions
+      - /tmp/proofforge_terminal:/tmp/proofforge_terminal
     restart: "no"
 
   # ── FastAPI backend ────────────────────────────────────────────────────────
@@ -98,10 +99,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock  # Docker SDK for sandbox management
-      - /tmp/submissions:/tmp/submissions           # Shared I/O volume for sandbox containers
-      - ./problems:/app/problems:ro                 # so seed scripts can run in-container
-      - ./scripts:/app/scripts:ro                   # (dev.ps1 runs them via compose exec)
+      - /var/run/docker.sock:/var/run/docker.sock      # Docker SDK for sandbox management
+      - /tmp/submissions:/tmp/submissions             # Shared I/O volume for sandbox containers
+      - /tmp/proofforge_terminal:/tmp/proofforge_terminal  # Browser terminal workspaces
+      - ./problems:/app/problems:ro                   # so seed scripts can run in-container
+      - ./scripts:/app/scripts:ro                     # (dev.ps1 runs them via compose exec)
     depends_on:
       sandbox-perms:
         condition: service_completed_successfully
