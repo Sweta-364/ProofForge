@@ -74,13 +74,13 @@ class SandboxRunner:
             if test_suite == "visible":
                 test_cmd = [
                     "pytest", "/workspace/tests/test_visible.py",
-                    "-v", "--tb=short",
+                    "-v", "--tb=short", "-p", "no:cacheprovider",
                     "--json-report", "--json-report-file=/output/results.json",
                 ]
             else:
                 test_cmd = [
                     "pytest", "/workspace/tests/",
-                    "-v", "--tb=short",
+                    "-v", "--tb=short", "-p", "no:cacheprovider",
                     "--json-report", "--json-report-file=/output/results.json",
                 ]
 
@@ -93,6 +93,9 @@ class SandboxRunner:
                 lambda: self.client.containers.run(
                     image=image,
                     command=test_cmd,
+                    # /workspace is read-only; run from the writable tmpfs so tests
+                    # that create scratch files (uploads, temp data) don't crash.
+                    working_dir="/tmp",
                     volumes={
                         str(submission_dir): {"bind": "/workspace", "mode": "ro"},
                         str(output_dir):     {"bind": "/output",    "mode": "rw"},
@@ -147,12 +150,36 @@ class SandboxRunner:
     def _parse_pytest_results(self, raw: dict, session_id: str) -> dict:
         tests = raw.get("tests", [])
         summary = raw.get("summary", {})
+        total = summary.get("total", 0)
+
+        # A collection error (missing dependency, import error in the test or
+        # starter code, syntax error) yields a report with 0 collected tests.
+        # Surface it as an error instead of a confusing "0/0 passed".
+        collect_errors = [
+            c for c in raw.get("collectors", [])
+            if c.get("outcome") == "failed"
+        ]
+        if total == 0 and collect_errors:
+            longrepr = collect_errors[0].get("longrepr") or "Test collection failed"
+            return {
+                "session_id": session_id,
+                "status": "error",
+                "passed": 0,
+                "failed": 0,
+                "total": 0,
+                "error": f"Could not collect any tests:\n{str(longrepr)[:800]}",
+                "tests": [],
+            }
+
+        # Tests that error during setup/call (summary key "error") still count
+        # toward the total and should read as not-passed.
+        failed = summary.get("failed", 0) + summary.get("error", 0)
         return {
             "session_id": session_id,
             "status": "completed",
             "passed": summary.get("passed", 0),
-            "failed": summary.get("failed", 0),
-            "total": summary.get("total", 0),
+            "failed": failed,
+            "total": total,
             "duration_ms": int(raw.get("duration", 0) * 1000),
             "tests": [
                 {

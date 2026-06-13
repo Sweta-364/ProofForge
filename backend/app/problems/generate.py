@@ -35,9 +35,18 @@ HARD RULES:
 1. The starter code MUST contain exactly one clear, specific bug related to the requested topic.
 2. Tests MUST fail on the broken starter code, and MUST pass after the correct fix is applied.
 3. Tests use pytest with FastAPI TestClient. Import the app as: from starter.main import app
-4. Only use packages available in the sandbox: fastapi, httpx, uvicorn, and Python stdlib.
-   Never import redis, sqlalchemy, celery, or any other third-party package.
+4. The sandbox has NO network access and NO external services (no real database, Redis,
+   or HTTP calls). The app and tests MUST be fully self-contained and run offline.
+   Available packages ONLY: fastapi, starlette, pydantic, httpx, python-multipart
+   (form/file uploads work), email-validator, itsdangerous, jinja2, pyyaml, cachetools,
+   python-jose, PyJWT, bcrypt, aiofiles, and the Python standard library.
+   Never import redis, celery, requests, or connect to any database or network resource.
 5. starter/requirements.txt must list only the packages the starter code actually imports.
+   For uploads, include python-multipart; for EmailStr, include email-validator.
+5b. Tests MUST NOT read from or write to disk — the sandbox filesystem is read-only.
+   Never call open(...) for writing. To test file uploads, pass in-memory bytes directly:
+   client.post("/upload", files={"file": ("name.txt", b"file content here", "text/plain")}).
+   Build all request payloads inline; do not create temp files.
 6. difficulty rules:
    - "junior": single obvious bug, 1-3 lines to fix
    - "mid":    subtle logic error, 5-15 lines to fix
@@ -70,9 +79,9 @@ REQUIRED OUTPUT — respond with ONLY a single JSON object, no markdown fences, 
   },
   "test_files": {
     "tests/__init__.py": "",
-    "tests/test_visible.py": "<2-4 pytest functions using TestClient, testing the fix>",
+    "tests/test_visible.py": "<EXACTLY 2 pytest functions using TestClient that fail on the broken code and pass after the fix>",
     "tests/hidden/__init__.py": "",
-    "tests/hidden/test_edge.py": "<2-4 pytest edge-case functions>"
+    "tests/hidden/test_edge.py": "<EXACTLY 2 pytest edge-case functions>"
   }
 }
 """

@@ -41,7 +41,8 @@ export interface TestRun {
   passed: number
   failed: number
   total: number
-  duration_ms: number
+  duration_ms?: number
+  error?: string
   tests: TestCase[]
 }
 

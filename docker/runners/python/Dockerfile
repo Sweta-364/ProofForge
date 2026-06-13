@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
         bcrypt==4.2.0 \
         fastapi==0.115.0 \
         uvicorn[standard]==0.30.6 \
+        python-multipart==0.0.12 \
+        email-validator==2.2.0 \
+        itsdangerous==2.2.0 \
+        jinja2==3.1.4 \
         sqlalchemy==2.0.36 \
         asyncpg==0.29.0 \
         aiofiles==24.1.0 \

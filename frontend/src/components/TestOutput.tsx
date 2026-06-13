@@ -81,6 +81,22 @@ export default function TestOutput({ results, isRunning }: TestOutputProps) {
     )
   }
 
+  if (results.status === 'error') {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#161b22] border-b border-[#30363d]">
+          <XCircle size={16} className="shrink-0 text-[#f85149]" />
+          <span className="text-sm font-semibold text-[#f85149]">Tests could not run</span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-3">
+          <pre className="text-xs text-[#f85149] bg-[#1c2128] rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+            {results.error || 'The test suite failed to execute. Check your code for syntax or import errors.'}
+          </pre>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Summary bar */}
