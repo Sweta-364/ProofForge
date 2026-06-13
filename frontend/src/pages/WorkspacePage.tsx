@@ -1,12 +1,13 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
-import { Play, Send, Loader, AlertCircle } from 'lucide-react'
+import { Play, Send, Loader, AlertCircle, TerminalSquare } from 'lucide-react'
 import { api } from '../lib/api'
 import { submissionSocket } from '../lib/ws'
 import AppHeader from '../components/AppHeader'
 import FileTree from '../components/FileTree'
 import TestOutput from '../components/TestOutput'
+import TerminalPanel from '../components/TerminalPanel'
 import type { User, Problem, TestRun } from '../types'
 
 const TRACKS = ['fullstack', 'backend', 'frontend', 'devops']
@@ -52,7 +53,6 @@ function languageForFile(path: string): string {
   return EXTENSION_LANGUAGES[ext] ?? 'plaintext'
 }
 
-/** Pick the most likely file the student should edit first. */
 function pickInitialFile(paths: string[]): string {
   const editable = paths.filter(
     (k) => !k.includes('test') && !k.includes('hidden') && !k.endsWith('__init__.py')
@@ -60,6 +60,9 @@ function pickInitialFile(paths: string[]): string {
   )
   return editable[0] ?? paths[0] ?? ''
 }
+
+const TERMINAL_MIN_H = 100
+const TERMINAL_DEFAULT_H = 240
 
 export default function WorkspacePage() {
   const navigate = useNavigate()
@@ -84,6 +87,37 @@ export default function WorkspacePage() {
   const [showTrackModal, setShowTrackModal] = useState(false)
   const [isSelectingTrack, setIsSelectingTrack] = useState(false)
 
+  // ── Terminal state ──────────────────────────────────────────────────────────
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false)
+  const [terminalHeight, setTerminalHeight] = useState(TERMINAL_DEFAULT_H)
+  const isResizing = useRef(false)
+  const resizeStartY = useRef(0)
+  const resizeStartH = useRef(0)
+
+  const token = localStorage.getItem('pf_token') ?? ''
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isResizing.current = true
+    resizeStartY.current = e.clientY
+    resizeStartH.current = terminalHeight
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isResizing.current) return
+      // Dragging UP increases terminal height (delta is negative clientY diff)
+      const delta = resizeStartY.current - ev.clientY
+      const maxH = window.innerHeight * 0.75
+      setTerminalHeight(Math.max(TERMINAL_MIN_H, Math.min(maxH, resizeStartH.current + delta)))
+    }
+    const onUp = () => {
+      isResizing.current = false
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   const loadProblem = useCallback(async () => {
     setIsLoadingProblem(true)
     setLoadError(null)
@@ -103,7 +137,6 @@ export default function WorkspacePage() {
     }
   }, [slug])
 
-  // Load user, then decide whether to show track modal or load problem
   useEffect(() => {
     api.getMe()
       .then((u) => {
@@ -141,7 +174,7 @@ export default function WorkspacePage() {
     try {
       const results = await api.runTests(sessionId, Object.fromEntries(files))
       setTestResults(results)
-    } catch (err: unknown) {
+    } catch {
       setTestResults({
         status: 'error',
         passed: 0,
@@ -165,7 +198,6 @@ export default function WorkspacePage() {
     setSubmissionStatus('Submitting...')
 
     try {
-      const token = localStorage.getItem('pf_token') ?? ''
       const { submission_id } = await api.submitSolution(sessionId, Object.fromEntries(files))
 
       submissionSocket.connect(submission_id, token, {
@@ -254,7 +286,7 @@ export default function WorkspacePage() {
     )
   }
 
-  // ── Main 3-column layout ────────────────────────────────────────────────────
+  // ── Main layout ─────────────────────────────────────────────────────────────
   return (
     <div className="h-screen flex flex-col bg-[#0d1117] text-[#e6edf3] overflow-hidden">
       {/* Header */}
@@ -273,9 +305,9 @@ export default function WorkspacePage() {
         }
       />
 
-      {/* 3-column body */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left panel — file tree + issue description */}
+      {/* 3-column workspace — shrinks when terminal is open */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Left panel */}
         <aside className="w-[280px] shrink-0 bg-[#161b22] border-r border-[#30363d] flex flex-col overflow-hidden">
           <div className="px-3 py-2 text-xs font-semibold text-[#8b949e] uppercase tracking-wider border-b border-[#21262d]">
             Files
@@ -293,83 +325,37 @@ export default function WorkspacePage() {
           </div>
         </aside>
 
-        {/* Center panel — editor + bottom bar */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-hidden" data-testid="editor-container">
-            {activeFile ? (
-              <Editor
-                height="100%"
-                path={activeFile}
-                language={languageForFile(activeFile)}
-                value={files.get(activeFile) ?? ''}
-                onChange={handleEditorChange}
-                theme="vs-dark"
-                options={{
-                  fontSize: 14,
-                  minimap: { enabled: false },
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'off',
-                  tabSize: 4,
-                  insertSpaces: true,
-                  renderWhitespace: 'selection',
-                  padding: { top: 12 },
-                }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-[#8b949e] text-sm">
-                No file selected
-              </div>
-            )}
-          </div>
-
-          {/* Bottom action bar */}
-          <div className="h-12 bg-[#161b22] border-t border-[#30363d] flex items-center gap-3 px-4 shrink-0">
-            <button
-              onClick={handleRunTests}
-              disabled={isRunningTests || isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1c2128] hover:bg-[#30363d] border border-[#30363d] rounded text-xs font-medium text-[#e6edf3] transition-colors disabled:opacity-50"
-            >
-              {isRunningTests ? (
-                <Loader size={13} className="animate-spin" />
-              ) : (
-                <Play size={13} />
-              )}
-              Run Tests
-            </button>
-
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#238636] hover:bg-[#2ea043] rounded text-xs font-medium text-white transition-colors disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <Loader size={13} className="animate-spin" />
-              ) : (
-                <Send size={13} />
-              )}
-              Submit PR ↗
-            </button>
-
-            {isSubmitting && submissionStatus && (
-              <span className="text-xs text-[#8b949e] flex items-center gap-1">
-                <Loader size={11} className="animate-spin" />
-                {submissionStatus}
-              </span>
-            )}
-
-            {submitError && (
-              <span className="text-xs text-[#f85149] flex items-center gap-1">
-                <AlertCircle size={11} />
-                {submitError}
-              </span>
-            )}
-          </div>
+        {/* Center — editor only, no action bar */}
+        <main className="flex-1 overflow-hidden" data-testid="editor-container">
+          {activeFile ? (
+            <Editor
+              height="100%"
+              path={activeFile}
+              language={languageForFile(activeFile)}
+              value={files.get(activeFile) ?? ''}
+              onChange={handleEditorChange}
+              theme="vs-dark"
+              options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                wordWrap: 'off',
+                tabSize: 4,
+                insertSpaces: true,
+                renderWhitespace: 'selection',
+                padding: { top: 12 },
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-[#8b949e] text-sm">
+              No file selected
+            </div>
+          )}
         </main>
 
-        {/* Right panel — tabs for tests / details */}
+        {/* Right panel */}
         <aside className="w-[320px] shrink-0 bg-[#161b22] border-l border-[#30363d] flex flex-col overflow-hidden">
-          {/* Tab bar */}
           <div className="flex border-b border-[#30363d] shrink-0">
             {(['tests', 'details'] as RightTab[]).map((tab) => (
               <button
@@ -385,8 +371,6 @@ export default function WorkspacePage() {
               </button>
             ))}
           </div>
-
-          {/* Tab content */}
           <div className="flex-1 overflow-hidden flex flex-col">
             {rightTab === 'tests' ? (
               <TestOutput results={testResults} isRunning={isRunningTests} />
@@ -408,6 +392,77 @@ export default function WorkspacePage() {
             )}
           </div>
         </aside>
+      </div>
+
+      {/* Drag-to-resize handle (only when terminal is open) */}
+      {isTerminalOpen && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          className="h-1.5 bg-[#21262d] hover:bg-[#58a6ff] cursor-ns-resize shrink-0 transition-colors"
+          title="Drag to resize terminal"
+        />
+      )}
+
+      {/* Terminal panel */}
+      {isTerminalOpen && sessionId && (
+        <div
+          className="shrink-0 border-t border-[#30363d] overflow-hidden"
+          style={{ height: terminalHeight }}
+        >
+          <TerminalPanel sessionId={sessionId} token={token} files={files} />
+        </div>
+      )}
+
+      {/* Action bar — always at very bottom */}
+      <div className="h-12 bg-[#161b22] border-t border-[#30363d] flex items-center gap-3 px-4 shrink-0">
+        <button
+          onClick={handleRunTests}
+          disabled={isRunningTests || isSubmitting}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1c2128] hover:bg-[#30363d] border border-[#30363d] rounded text-xs font-medium text-[#e6edf3] transition-colors disabled:opacity-50"
+        >
+          {isRunningTests ? <Loader size={13} className="animate-spin" /> : <Play size={13} />}
+          Run Tests
+        </button>
+
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#238636] hover:bg-[#2ea043] rounded text-xs font-medium text-white transition-colors disabled:opacity-50"
+        >
+          {isSubmitting ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
+          Submit PR ↗
+        </button>
+
+        {isSubmitting && submissionStatus && (
+          <span className="text-xs text-[#8b949e] flex items-center gap-1">
+            <Loader size={11} className="animate-spin" />
+            {submissionStatus}
+          </span>
+        )}
+
+        {submitError && (
+          <span className="text-xs text-[#f85149] flex items-center gap-1">
+            <AlertCircle size={11} />
+            {submitError}
+          </span>
+        )}
+
+        <div className="flex-1" />
+
+        {/* Terminal toggle */}
+        <button
+          onClick={() => setIsTerminalOpen((v) => !v)}
+          disabled={!sessionId}
+          title={isTerminalOpen ? 'Close terminal' : 'Open terminal'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded text-xs font-medium transition-colors disabled:opacity-40 ${
+            isTerminalOpen
+              ? 'bg-[#1c2128] border-[#58a6ff] text-[#58a6ff]'
+              : 'bg-[#1c2128] border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#58a6ff]'
+          }`}
+        >
+          <TerminalSquare size={13} />
+          Terminal
+        </button>
       </div>
     </div>
   )
