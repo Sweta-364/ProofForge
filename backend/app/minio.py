@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 PROBLEMS_BUCKET = "problems"
 SUBMISSIONS_BUCKET = "submissions"
+COMMUNITY_BUCKET = "community"
 
 _client: Minio | None = None
 
@@ -27,7 +28,7 @@ def init_minio() -> None:
 
 def ensure_buckets() -> None:
     """Create required buckets if they do not exist. Called at startup."""
-    for bucket in (PROBLEMS_BUCKET, SUBMISSIONS_BUCKET):
+    for bucket in (PROBLEMS_BUCKET, SUBMISSIONS_BUCKET, COMMUNITY_BUCKET):
         if not _client.bucket_exists(bucket):
             _client.make_bucket(bucket)
             logger.info("Created MinIO bucket: %s", bucket)
