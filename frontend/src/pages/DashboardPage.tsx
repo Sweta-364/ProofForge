@@ -22,9 +22,27 @@ const TRACK_LABELS: Record<string, string> = {
   devops: 'DevOps',
 }
 const DIFFICULTY_COLORS: Record<string, string> = {
-  junior: 'bg-[#1a4731] text-[#3fb950]',
-  mid: 'bg-[#3d2f00] text-[#d29922]',
-  senior: 'bg-[#3d0c09] text-[#f85149]',
+  junior:      'bg-[#1a4731] text-[#3fb950]',
+  junior_plus: 'bg-[#163a2a] text-[#56d364]',
+  mid:         'bg-[#3d2f00] text-[#d29922]',
+  mid_plus:    'bg-[#3a2800] text-[#e3b341]',
+  senior:      'bg-[#3d0c09] text-[#f85149]',
+}
+const DIFFICULTY_LABELS: Record<string, string> = {
+  junior:      'Junior',
+  junior_plus: 'Junior+',
+  mid:         'Mid',
+  mid_plus:    'Mid+',
+  senior:      'Senior',
+}
+const DIFF_FILTER_OPTIONS = ['all', 'junior', 'mid', 'senior'] as const
+type DiffFilter = (typeof DIFF_FILTER_OPTIONS)[number]
+
+function matchesDiff(difficulty: string, filter: DiffFilter): boolean {
+  if (filter === 'all') return true
+  if (filter === 'junior') return difficulty === 'junior' || difficulty === 'junior_plus'
+  if (filter === 'mid') return difficulty === 'mid' || difficulty === 'mid_plus'
+  return difficulty === filter
 }
 
 export default function DashboardPage() {
@@ -35,6 +53,9 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSelectingTrack, setIsSelectingTrack] = useState(false)
   const [showTrackPicker, setShowTrackPicker] = useState(false)
+
+  const [trackFilter, setTrackFilter] = useState<string>('all')
+  const [diffFilter, setDiffFilter] = useState<DiffFilter>('all')
 
   // ── Generate modal state ────────────────────────────────────────────────────
   const [showGenerateModal, setShowGenerateModal] = useState(false)
@@ -126,8 +147,18 @@ export default function DashboardPage() {
   const solvedCount = curatedProblems.filter((p) => p.solved).length
   const totalCount = curatedProblems.length
 
-  // Group curated problems by track, user's own track first
-  const problemsByTrack = curatedProblems.reduce<Record<string, typeof curatedProblems>>(
+  // Apply track + difficulty filters
+  const visibleProblems = curatedProblems
+    .filter((p) => trackFilter === 'all' || (p.track ?? 'backend') === trackFilter)
+    .filter((p) => matchesDiff(p.difficulty, diffFilter))
+
+  // Group visible problems by track, user's own track first
+  const allTrackCounts = curatedProblems.reduce<Record<string, number>>((acc, p) => {
+    const t = p.track ?? 'backend'
+    acc[t] = (acc[t] ?? 0) + 1
+    return acc
+  }, {})
+  const problemsByTrack = visibleProblems.reduce<Record<string, typeof visibleProblems>>(
     (acc, p) => {
       const track = p.track ?? 'backend'
       ;(acc[track] ??= []).push(p)
@@ -140,7 +171,7 @@ export default function DashboardPage() {
     ...TRACKS.filter((t) => t !== user.career_track),
     ...Object.keys(problemsByTrack).filter((t) => !TRACKS.includes(t)),
   ]
-  const scores = progress.problems
+  const scores = curatedProblems
     .map((p) => p.best_score)
     .filter((s): s is number => s !== null)
   const avgScore = scores.length
@@ -256,14 +287,58 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Problem bank, grouped by track */}
+        {/* Problem bank */}
         <section>
           <h2 className="text-sm font-semibold text-[#8b949e] uppercase tracking-wider mb-3">
             Problems
           </h2>
-          {curatedProblems.length === 0 && (
+
+          {/* Track filter tabs */}
+          <div className="flex items-center gap-1 mb-2 overflow-x-auto pb-1">
+            {(['all', ...TRACKS] as const).map((t) => {
+              const count = t === 'all' ? curatedProblems.length : (allTrackCounts[t] ?? 0)
+              const active = trackFilter === t
+              return (
+                <button
+                  key={t}
+                  onClick={() => setTrackFilter(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-[#0d2e4d] text-[#58a6ff] border border-[#1f6feb]'
+                      : 'bg-[#161b22] text-[#8b949e] border border-[#30363d] hover:text-[#e6edf3]'
+                  }`}
+                >
+                  {t === 'all' ? 'All' : TRACK_LABELS[t]}
+                  <span className="ml-1.5 text-[10px] opacity-70">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Difficulty filter chips */}
+          <div className="flex items-center gap-1.5 mb-4">
+            {DIFF_FILTER_OPTIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => setDiffFilter(d)}
+                className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                  diffFilter === d
+                    ? 'bg-[#21262d] text-[#e6edf3] border border-[#58a6ff]'
+                    : 'bg-transparent text-[#8b949e] border border-[#21262d] hover:border-[#30363d] hover:text-[#e6edf3]'
+                }`}
+              >
+                {d === 'all' ? 'All levels' : d.charAt(0).toUpperCase() + d.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {visibleProblems.length === 0 && (
             <div className="bg-[#161b22] border border-[#30363d] rounded-xl">
-              <p className="p-4 text-sm text-[#8b949e]">No problems available yet.</p>
+              <p className="p-4 text-sm text-[#8b949e]">
+                {curatedProblems.length === 0
+                  ? 'No problems available yet.'
+                  : 'No problems match the current filters.'}
+              </p>
             </div>
           )}
           <div className="space-y-6">
@@ -271,20 +346,22 @@ export default function DashboardPage() {
               .filter((track) => problemsByTrack[track]?.length)
               .map((track) => (
                 <div key={track}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xs font-semibold text-[#e6edf3] uppercase tracking-wider">
-                      {TRACK_LABELS[track] ?? track}
-                    </h3>
-                    <span className="text-xs text-[#8b949e]">
-                      {problemsByTrack[track].filter((p) => p.solved).length}/
-                      {problemsByTrack[track].length} solved
-                    </span>
-                    {track === user.career_track && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0d2e4d] text-[#58a6ff] font-medium">
-                        your track
+                  {trackFilter === 'all' && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xs font-semibold text-[#e6edf3] uppercase tracking-wider">
+                        {TRACK_LABELS[track] ?? track}
+                      </h3>
+                      <span className="text-xs text-[#8b949e]">
+                        {problemsByTrack[track].filter((p) => p.solved).length}/
+                        {problemsByTrack[track].length} solved
                       </span>
-                    )}
-                  </div>
+                      {track === user.career_track && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0d2e4d] text-[#58a6ff] font-medium">
+                          your track
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="bg-[#161b22] border border-[#30363d] rounded-xl divide-y divide-[#21262d]">
                     {problemsByTrack[track].map((p) => (
                       <Link
@@ -301,15 +378,31 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium truncate group-hover:text-[#58a6ff] transition-colors">
                             {p.title}
                           </p>
-                          <p className="text-xs text-[#8b949e]">
-                            {p.category}
-                            {p.attempts > 0 && ` · ${p.attempts} attempt${p.attempts > 1 ? 's' : ''}`}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-[#8b949e]">
+                              {p.category}
+                              {p.attempts > 0 && ` · ${p.attempts} attempt${p.attempts > 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                          {p.attempts > 0 && p.best_score !== null && (
+                            <div className="mt-1.5 h-1 w-full max-w-[120px] bg-[#21262d] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  p.best_score >= 60
+                                    ? 'bg-[#3fb950]'
+                                    : p.best_score >= 40
+                                    ? 'bg-[#d29922]'
+                                    : 'bg-[#f85149]'
+                                }`}
+                                style={{ width: `${p.best_score}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
                         <span
                           className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${DIFFICULTY_COLORS[p.difficulty] ?? 'bg-[#1c2128] text-[#8b949e]'}`}
                         >
-                          {p.difficulty}
+                          {DIFFICULTY_LABELS[p.difficulty] ?? p.difficulty}
                         </span>
                         <span className="text-xs text-[#8b949e] w-16 text-right shrink-0">
                           {p.best_score !== null ? `${p.best_score}/100` : '—'}

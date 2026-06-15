@@ -15,7 +15,7 @@ export interface Problem {
   slug: string
   title: string
   description: string
-  difficulty: 'junior' | 'mid' | 'senior'
+  difficulty: 'junior' | 'junior_plus' | 'mid' | 'mid_plus' | 'senior'
   category: string
   track?: string
   language: string
