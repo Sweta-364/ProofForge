@@ -7,6 +7,8 @@ import WorkspacePage from './pages/WorkspacePage'
 import ReviewPage from './pages/ReviewPage'
 import PortfolioPage from './pages/PortfolioPage'
 import ProfilePage from './pages/ProfilePage'
+import CommunityPage from './pages/CommunityPage'
+import CommunityPostPage from './pages/CommunityPostPage'
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem('pf_token')
@@ -64,6 +66,22 @@ export default function AppRouter() {
         element={
           <PrivateRoute>
             <ReviewPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/community"
+        element={
+          <PrivateRoute>
+            <CommunityPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/community/posts/:postId"
+        element={
+          <PrivateRoute>
+            <CommunityPostPage />
           </PrivateRoute>
         }
       />

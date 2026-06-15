@@ -8,6 +8,7 @@ import {
   LogOut,
   User as UserIcon,
   Award,
+  MessageSquare,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import type { User } from '../types'
@@ -97,6 +98,14 @@ export default function AppHeader({ user, center, backTo }: AppHeaderProps) {
               >
                 <LayoutDashboard size={13} />
                 Dashboard
+              </Link>
+              <Link
+                to="/community"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-xs text-[#e6edf3] hover:bg-[#30363d] transition-colors"
+              >
+                <MessageSquare size={13} />
+                Community
               </Link>
               <Link
                 to="/profile"

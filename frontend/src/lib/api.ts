@@ -8,6 +8,15 @@ import type {
   ProgressResponse,
   ActivityResponse,
   GenerateProblemRequest,
+  PostsListResponse,
+  CommunityPost,
+  CommunityPostDetail,
+  CommunityAnswer,
+  CreatePostBody,
+  VoteValue,
+  VoteResult,
+  ImageUploadResult,
+  UserSearchResponse,
 } from '../types'
 
 class ApiClient {
@@ -114,6 +123,80 @@ class ApiClient {
       body: JSON.stringify(body),
     })
   }
+
+  // ── Community ──────────────────────────────────────────────────────────
+
+  listCommunityPosts(sort: 'new' | 'top' = 'new', page = 1): Promise<PostsListResponse> {
+    const params = new URLSearchParams({ sort, page: String(page) })
+    return this.request<PostsListResponse>(`/community/posts?${params.toString()}`)
+  }
+
+  getCommunityPost(postId: string): Promise<CommunityPostDetail> {
+    return this.request<CommunityPostDetail>(`/community/posts/${postId}`)
+  }
+
+  createCommunityPost(body: CreatePostBody): Promise<CommunityPost> {
+    return this.request<CommunityPost>('/community/posts', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  }
+
+  addAnswer(postId: string, body: string): Promise<CommunityAnswer> {
+    return this.request<CommunityAnswer>(`/community/posts/${postId}/answers`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    })
+  }
+
+  votePost(postId: string, value: VoteValue): Promise<VoteResult> {
+    return this.request<VoteResult>(`/community/posts/${postId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    })
+  }
+
+  voteAnswer(answerId: string, value: VoteValue): Promise<VoteResult> {
+    return this.request<VoteResult>(`/community/answers/${answerId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ value }),
+    })
+  }
+
+  searchCommunityUsers(q: string): Promise<UserSearchResponse> {
+    return this.request<UserSearchResponse>(
+      `/community/users/search?q=${encodeURIComponent(q)}`,
+    )
+  }
+
+  /** Image upload uses multipart/form-data, so it bypasses the JSON `request` helper. */
+  async uploadCommunityImage(file: File): Promise<ImageUploadResult> {
+    const token = this.getToken()
+    const form = new FormData()
+    form.append('file', file)
+
+    const res = await fetch(`${this.baseUrl}/community/posts/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    })
+
+    if (res.status === 401) {
+      localStorage.removeItem('pf_token')
+      window.location.href = '/login'
+      throw new Error('Unauthorized — redirecting to login')
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error((body as { detail?: string }).detail ?? res.statusText)
+    }
+    return res.json() as Promise<ImageUploadResult>
+  }
+}
+
+/** URL for a post's image, served by the backend (proxied via /api in dev). */
+export function communityImageUrl(postId: string): string {
+  return `/api/v1/community/posts/${postId}/image`
 }
 
 export const api = new ApiClient()

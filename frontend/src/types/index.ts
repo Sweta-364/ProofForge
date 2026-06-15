@@ -172,3 +172,74 @@ export interface ProgressResponse {
   problems: ProblemProgress[]
   recent_submissions: RecentSubmission[]
 }
+
+// ── Community ──────────────────────────────────────────────────────────────
+
+export type VoteValue = -1 | 0 | 1
+
+export interface CommunityAuthor {
+  github_login: string
+  name: string | null
+  avatar_url: string | null
+}
+
+export interface CommunityPost {
+  id: string
+  title: string
+  body: string
+  has_image: boolean
+  score: number
+  my_vote: VoteValue
+  answer_count: number
+  created_at: string
+  author: CommunityAuthor
+}
+
+export interface CommunityAnswer {
+  id: string
+  body: string
+  score: number
+  my_vote: VoteValue
+  created_at: string
+  author: CommunityAuthor
+}
+
+export interface CommunityPostDetail {
+  post: CommunityPost
+  answers: CommunityAnswer[]
+}
+
+export interface PostsListResponse {
+  posts: CommunityPost[]
+  page: number
+  limit: number
+}
+
+export interface CommunityUserResult {
+  github_login: string
+  name: string | null
+  avatar_url: string | null
+  total_score: number
+  issues_resolved: number
+}
+
+export interface UserSearchResponse {
+  users: CommunityUserResult[]
+}
+
+export interface VoteResult {
+  score: number
+  my_vote: VoteValue
+}
+
+export interface ImageUploadResult {
+  image_key: string
+  image_type: string
+}
+
+export interface CreatePostBody {
+  title: string
+  body: string
+  image_key?: string
+  image_type?: string
+}
